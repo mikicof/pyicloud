@@ -457,18 +457,24 @@ class PhotoAsset(object):
     }
 
     PHOTO_VERSION_LOOKUP = {
-        u"original": u"resOriginal",
+        u"full": u"resJPEGFull",
+        u"large": u"resJPEGLarge",
         u"medium": u"resJPEGMed",
         u"thumb": u"resJPEGThumb",
+        u"sidecar": u"resSidecar",
+        u"original": u"resOriginal",
+        u"original_alt": u"resOriginalAlt",
         u"originalVideo": u"resOriginalVidCompl",
         u"mediumVideo": u"resVidMed",
         u"thumbVideo": u"resVidSmall",
     }
 
     VIDEO_VERSION_LOOKUP = {
-        u"original": u"resOriginal",
+        u"full": u"resVidFull",
         u"medium": u"resVidMed",
-        u"thumb": u"resVidSmall"
+        u"thumb": u"resVidSmall",
+        u"original": u"resOriginal",
+        u"original_compl": u"resOriginalVidCompl"
     }
 
     @property
@@ -550,49 +556,51 @@ class PhotoAsset(object):
             else:
                 typed_version_lookup = self.PHOTO_VERSION_LOOKUP
 
-            for key, prefix in typed_version_lookup.items():
-                if '%sRes' % prefix in self._master_record['fields']:
-                    f = self._master_record['fields']
-                    filename = self.filename
-                    version = {'filename': filename}
+            for record in ("_master_record", "_asset_record"):
+                record = getattr(self, record)
+                for key, prefix in typed_version_lookup.items():
+                    if '%sRes' % prefix in record['fields']:
+                        f = record['fields']
+                        filename = self.filename
+                        version = {'filename': filename}
 
-                    width_entry = f.get('%sWidth' % prefix)
-                    if width_entry:
-                        version['width'] = width_entry['value']
-                    else:
-                        version['width'] = None
-
-                    height_entry = f.get('%sHeight' % prefix)
-                    if height_entry:
-                        version['height'] = height_entry['value']
-                    else:
-                        version['height'] = None
-
-                    size_entry = f.get('%sRes' % prefix)
-                    if size_entry:
-                        version['size'] = size_entry['value']['size']
-                        version['url'] = size_entry['value']['downloadURL']
-                    else:
-                        version['size'] = None
-                        version['url'] = None
-
-                    type_entry = f.get('%sFileType' % prefix)
-                    if type_entry:
-                        version['type'] = type_entry['value']
-                    else:
-                        version['type'] = None
-
-                    # Change live photo movie file extension to .MOV
-                    if (self.item_type == "image" and
-                        version['type'] == "com.apple.quicktime-movie"):
-                        if filename.lower().endswith('.heic'):
-                            version['filename']=re.sub(
-                                '\.[^.]+$', '_HEVC.MOV', version['filename'])
+                        width_entry = f.get('%sWidth' % prefix)
+                        if width_entry:
+                            version['width'] = width_entry['value']
                         else:
-                            version['filename'] = re.sub(
-                                '\.[^.]+$', '.MOV', version['filename'])
+                            version['width'] = None
 
-                    self._versions[key] = version
+                        height_entry = f.get('%sHeight' % prefix)
+                        if height_entry:
+                            version['height'] = height_entry['value']
+                        else:
+                            version['height'] = None
+
+                        size_entry = f.get('%sRes' % prefix)
+                        if size_entry:
+                            version['size'] = size_entry['value']['size']
+                            version['url'] = size_entry['value']['downloadURL']
+                        else:
+                            version['size'] = None
+                            version['url'] = None
+
+                        type_entry = f.get('%sFileType' % prefix)
+                        if type_entry:
+                            version['type'] = type_entry['value']
+                        else:
+                            version['type'] = None
+
+                        # Change live photo movie file extension to .MOV
+                        if (self.item_type == "image" and
+                            version['type'] == "com.apple.quicktime-movie"):
+                            if filename.lower().endswith('.heic'):
+                                version['filename']=re.sub(
+                                    '\.[^.]+$', '_HEVC.MOV', version['filename'])
+                            else:
+                                version['filename'] = re.sub(
+                                    '\.[^.]+$', '.MOV', version['filename'])
+
+                        self._versions[key] = version
 
         return self._versions
 
